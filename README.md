@@ -19,6 +19,9 @@ Telegram-бот личного кабинета абонента для билл
 ### Docker (production)
 
 ```bash
+git clone https://github.com/Fenicu/ubilling_user_bot.git
+cd ubilling_user_bot
+
 cp .env.example .env
 # Отредактируйте .env — укажите BOT_TOKEN и UBILLING_URL
 
