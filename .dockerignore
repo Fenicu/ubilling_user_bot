@@ -1,0 +1,16 @@
+.venv/
+.git/
+.gitignore
+.dockerignore
+.env
+.claude/
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+.idea/
+.vscode/
+README.md
+SPECIFICATION.md

@@ -1,0 +1,162 @@
+{
+  "_meta": {
+    "name": "English",
+    "flag": "🇬🇧"
+  },
+  "auth": {
+    "enter_login": "Enter your login:",
+    "enter_password": "Enter your password:",
+    "success": "✅ Authorization successful!",
+    "failed": "❌ Invalid login or password. Please try again.",
+    "session_expired": "⏰ Session expired. Press /start to login again.",
+    "logged_out": "👋 You have logged out."
+  },
+  "menu": {
+    "balance": "💰 Balance & Payments",
+    "tariff": "📋 Tariff",
+    "tickets": "🎫 Tickets",
+    "announcements": "📢 Announcements",
+    "freeze": "❄️ Freeze",
+    "credit": "💳 Credit",
+    "info": "ℹ️ Information",
+    "logout": "🚪 Logout",
+    "back": "← Back",
+    "language": "🌐 Language"
+  },
+  "common": {
+    "cancel": "❌ Cancel"
+  },
+  "user_info": {
+    "header": "👤 {realname}",
+    "balance": "💰 Balance: {cash} {currency}",
+    "tariff": "📋 Tariff: {tariff_name}",
+    "status": "📡 Status: {account_state}"
+  },
+  "payments": {
+    "title": "💰 Balance & Payments",
+    "history": "📜 Payment History",
+    "fee_history": "📊 Fee History",
+    "pay_card": "💳 Activate Card",
+    "online": "🌐 Pay Online",
+    "history_title": "📜 Payment History:",
+    "no_history": "No payments found.",
+    "select_period": "Select period:",
+    "current_month": "📅 Current month",
+    "last_month": "📅 Last month",
+    "three_months": "📅 Last 3 months",
+    "fee_title": "📊 Fees from {date_from} to {date_to}:",
+    "no_charges": "No fees found.",
+    "enter_card": "Enter payment card number:",
+    "card_result": "Card processed.",
+    "payment_line": "📅 {date} — +{summ} (balance: {balance})",
+    "fee_line": "📅 {date} — -{fee} | {tariff}",
+    "online_title": "🌐 Select payment system:",
+    "no_systems": "Payment systems unavailable."
+  },
+  "tariffs": {
+    "title": "📋 Tariffs",
+    "current": "📋 Current Tariff",
+    "available": "📝 Available Tariffs",
+    "all": "📚 All Tariffs",
+    "current_header": "📋 Current Tariff:",
+    "vservices_header": "🔧 Connected Services:",
+    "available_header": "📝 Available tariffs to change:",
+    "no_available": "No tariffs available for change.",
+    "all_header": "📚 All provider tariffs:",
+    "tariff_line": "  {name} — {price} / {days}",
+    "vservice_line": "  {name} — {price} / {days}"
+  },
+  "tickets": {
+    "title": "🎫 Tickets",
+    "my_tickets": "📋 My Tickets",
+    "create": "✏️ Create Ticket",
+    "reply": "💬 Reply to #{ticket_id}",
+    "list_header": "🎫 Your Tickets:",
+    "no_tickets": "You have no tickets.",
+    "status_open": "open",
+    "status_closed": "closed",
+    "enter_text": "Enter your message:",
+    "created": "✅ Ticket #{ticket_id} created!",
+    "create_error": "❌ Error creating ticket.",
+    "enter_reply": "Enter reply for ticket #{ticket_id}:",
+    "reply_sent": "✅ Reply sent!",
+    "reply_error": "❌ Error sending reply."
+  },
+  "announcements": {
+    "header": "📢 Announcements",
+    "empty": "No new announcements.",
+    "mark_read": "✓ Mark as read",
+    "marked": "✅ Announcements marked as read."
+  },
+  "freeze": {
+    "header": "❄️ Account Freeze",
+    "status": "Status: {freeze_status}",
+    "not_frozen": "not frozen",
+    "price": "Price: {price}",
+    "period": "Period: {date_from} — {date_to}",
+    "days_used": "Days used: {used} of {total}",
+    "days_available": "Days available: {available}",
+    "freeze_btn": "❄️ Freeze",
+    "unfreeze_btn": "☀️ Unfreeze",
+    "confirm_question": "Are you sure you want to freeze the account?",
+    "unfreeze_question": "Are you sure you want to unfreeze the account?",
+    "confirm_freeze": "✅ Yes, freeze",
+    "confirm_unfreeze": "✅ Yes, unfreeze",
+    "frozen": "✅ Account frozen!",
+    "unfrozen": "✅ Account unfrozen!"
+  },
+  "credit": {
+    "header": "💳 Credit",
+    "no_info": "Credit information unavailable.",
+    "period": "Term: from {min_day} to {max_day} days",
+    "price": "Price: {price} {currency}",
+    "get_btn": "💳 Get Credit",
+    "confirm_question": "Are you sure you want to get credit?",
+    "confirm": "✅ Yes, get it",
+    "success": "✅ Credit granted!"
+  },
+  "info": {
+    "title": "ℹ️ Information",
+    "account_btn": "👤 Account Data",
+    "provider_btn": "🏢 Provider Data",
+    "header": "ℹ️ Account Information",
+    "realname": "👤 Name: {realname}",
+    "address": "📍 Address: {address}",
+    "phone": "📞 Phone: {phone}",
+    "mobile": "📱 Mobile: {mobile}",
+    "email": "📧 Email: {email}",
+    "contract": "📄 Contract: {contract}",
+    "pay_id": "🆔 Pay ID: {pay_id}",
+    "tariff": "📋 Tariff: {tariff_name}",
+    "balance": "💰 Balance: {cash} {currency}",
+    "credit": "💳 Credit: {credit} (until {credit_expire})",
+    "status": "📡 Status: {account_state}",
+    "expire": "📅 Valid until: {account_expire}",
+    "ip": "🌐 IP: {ip}",
+    "download": "📥 Downloaded: {traffic_download}",
+    "upload": "📤 Uploaded: {traffic_upload}",
+    "total": "📊 Total: {traffic_total}"
+  },
+  "provider": {
+    "header": "🏢 Provider Information",
+    "not_assigned": "ℹ️ Provider information is not available.\n\nNo contractor is assigned to your account.",
+    "name": "Name: {name} ({abbr})",
+    "phone": "📞 Phone: {phone}",
+    "email": "📧 Email: {email}",
+    "site": "🌐 Website: {url}",
+    "jur_addr": "📍 Legal address: {addr}",
+    "phys_addr": "📍 Physical address: {addr}",
+    "bank": "🏦 Bank: {bank}",
+    "edrpo": "📄 EDRPOU: {edrpo}",
+    "license": "📄 License: {license}"
+  },
+  "language": {
+    "choose": "🌐 Choose language / Оберіть мову:",
+    "changed": "✅ Language changed!"
+  },
+  "errors": {
+    "connection": "❌ Server connection error. Please try later.",
+    "auth_failed": "❌ Authorization error.",
+    "unknown": "❌ Unknown error."
+  }
+}
