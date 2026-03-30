@@ -70,6 +70,7 @@ async def main() -> None:
     dp.errors.register(handle_message_not_modified, TelegramBadRequest)
 
     try:
+        await bot.delete_webhook(drop_pending_updates=True)
         logger.info("Бот запущен")
         await dp.start_polling(bot)
     finally:
