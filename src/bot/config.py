@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     ubilling_url: str
     ubilling_uber_key: str | None = None
-    session_ttl_hours: int = 24
+    session_ttl_hours: int = -1
     default_locale: str = "uk"
     log_level: str = "INFO"
 
