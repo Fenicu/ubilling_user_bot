@@ -11,7 +11,7 @@ from aiogram.exceptions import TelegramForbiddenError
 from bot.config import settings
 from bot.db import SupportDialog, async_session
 from bot.i18n import LocaleService
-from bot.services.support import close_dialog, dialogs_to_autoclose, user_locale
+from bot.services.support import close_dialog, dialogs_to_autoclose, record_message, user_locale
 from bot.utils.support import autoclose_cutoff
 
 logger = logging.getLogger(__name__)
@@ -32,23 +32,39 @@ async def _autoclose_one(bot: Bot, locale_service: LocaleService, dialog: Suppor
             return
         locale = await user_locale(db, dialog.telegram_id)
 
-    t_user = partial(locale_service.get, locale)
-    try:
-        await bot.send_message(dialog.telegram_id, t_user("support.autoclosed"))
-    except TelegramForbiddenError:
-        logger.warning(
-            "autoclose: абонент %s заблокировал бота, уведомление о закрытии диалога %s не доставлено",
-            dialog.telegram_id,
-            dialog.id,
-        )
+        t_user = partial(locale_service.get, locale)
+        try:
+            await bot.send_message(dialog.telegram_id, t_user("support.autoclosed"))
+        except TelegramForbiddenError:
+            logger.warning(
+                "autoclose: абонент %s заблокировал бота, уведомление о закрытии диалога %s не доставлено",
+                dialog.telegram_id,
+                dialog.id,
+            )
 
-    t_group = partial(locale_service.get, settings.default_locale)
-    await bot.send_message(
-        chat_id=settings.support_chat_id,
-        message_thread_id=settings.support_topic_id,
-        text=t_group("support_group.autoclosed_notice"),
-        reply_to_message_id=dialog.card_message_id,
-    )
+        t_group = partial(locale_service.get, settings.default_locale)
+        notice = await bot.send_message(
+            chat_id=settings.support_chat_id,
+            message_thread_id=settings.support_topic_id,
+            text=t_group("support_group.autoclosed_notice"),
+            reply_to_message_id=dialog.card_message_id,
+        )
+        # Нотис маппим в support_messages как 'service' — иначе reply оператора на него
+        # молча игнорируется (сообщение не найдено в БД).
+        try:
+            await record_message(db, dialog.id, notice.message_id, "service")
+        except Exception:
+            try:
+                await db.rollback()
+            except Exception:
+                logger.warning(
+                    "autoclose: не удалось откатить сессию после сбоя записи", exc_info=True
+                )
+            logger.error(
+                "autoclose: сбой записи маппинга нотиса об автозакрытии диалога %s",
+                dialog.id,
+                exc_info=True,
+            )
 
 
 async def autoclose_loop(bot: Bot, locale_service: LocaleService) -> None:

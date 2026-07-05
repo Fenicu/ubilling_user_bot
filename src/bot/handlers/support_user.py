@@ -158,7 +158,7 @@ async def close_support_by_user(
         if dialog is not None:
             await close_dialog(db, dialog.id, closed_by="user")
             try:
-                await callback.bot.send_message(
+                notice = await callback.bot.send_message(
                     chat_id=settings.support_chat_id,
                     message_thread_id=settings.support_topic_id,
                     text=t_default("support_group.closed_by_user"),
@@ -169,6 +169,18 @@ async def close_support_by_user(
                     "support: не удалось уведомить топик о закрытии диалога %s абонентом",
                     dialog.id,
                 )
+            else:
+                # Нотис маппим в support_messages как 'service' — иначе reply оператора
+                # на него молча игнорируется (сообщение не найдено в БД).
+                try:
+                    await record_message(db, dialog.id, notice.message_id, "service")
+                except Exception:
+                    await _rollback_quietly(db)
+                    logger.error(
+                        "support: сбой записи маппинга нотиса о закрытии диалога %s абонентом",
+                        dialog.id,
+                        exc_info=True,
+                    )
 
     await state.clear()
     await callback.message.edit_text(t("support.closed"))

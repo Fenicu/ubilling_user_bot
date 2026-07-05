@@ -279,12 +279,15 @@ async def relay_operator_message(
             "support_group: сбой записи в БД после доставки ответа оператора %s абоненту",
             message.message_id,
         )
-        await _write_or_rollback(
-            touch_dialog(db, dialog.id),
-            db,
-            "support_group: сбой обновления last_activity_at диалога %s",
-            dialog.id,
-        )
+        if dialog.status != "closed":
+            # Активность закрытого диалога не мутируем — reply в закрытый диалог
+            # доставляется, но переоткрытием или продлением жизни диалога не считается.
+            await _write_or_rollback(
+                touch_dialog(db, dialog.id),
+                db,
+                "support_group: сбой обновления last_activity_at диалога %s",
+                dialog.id,
+            )
 
         # Реплай на карточку абонента или шапку медиа (direction='service') не имеет
         # собственной позиции среди inbound — такие сообщения постятся раньше настоящей
