@@ -18,6 +18,13 @@ class Settings(BaseSettings):
     default_locale: str = "uk"
     log_level: str = "INFO"
 
+    support_chat_id: int | None = None
+    support_topic_id: int | None = None
+    support_reaction_unanswered: str = "👀"
+    support_reaction_answered: str = "👌"
+    support_reaction_undelivered: str = "💔"
+    support_autoclose_hours: int = 48
+
     @field_validator("ubilling_uber_key", mode="before")
     @classmethod
     def empty_str_to_none(cls, v: str | None) -> str | None:
@@ -25,6 +32,19 @@ class Settings(BaseSettings):
         if v is None or v.strip() == "":
             return None
         return v
+
+    @field_validator("support_chat_id", "support_topic_id", mode="before")
+    @classmethod
+    def support_empty_str_to_none(cls, v: object) -> object:
+        """Пустая строка в env → None."""
+        if isinstance(v, str) and v.strip() == "":
+            return None
+        return v
+
+    @property
+    def support_enabled(self) -> bool:
+        """Фича чата поддержки включена, если задан чат."""
+        return self.support_chat_id is not None
 
 
 settings = Settings()
