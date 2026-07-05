@@ -1,5 +1,6 @@
 """Обработчики раздела объявлений."""
 
+import html
 from typing import Callable
 
 from aiogram import F, Router
@@ -37,8 +38,8 @@ async def show_announcements(
 
     lines = [t("announcements.header"), ""]
     for ann in announcements[:5]:
-        lines.append(f"📢 {ann.title or '—'}")
-        lines.append(f"{ann.text or ''}")
+        lines.append(f"📢 {html.escape(ann.title or '—', quote=False)}")
+        lines.append(html.escape(ann.text or "", quote=False))
         lines.append("───")
 
     kb = InlineKeyboardMarkup(

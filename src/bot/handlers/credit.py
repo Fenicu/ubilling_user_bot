@@ -1,5 +1,6 @@
 """Обработчики раздела кредита."""
 
+import html
 from typing import Callable
 
 from aiogram import F, Router
@@ -32,7 +33,7 @@ async def show_credit_info(
     lines = [
         t("credit.header"),
         "",
-        data.full_message or data.message or t("credit.no_info"),
+        html.escape(data.full_message or data.message, quote=False) or t("credit.no_info"),
         "",
         t("credit.period", min_day=data.min_day or "—", max_day=data.max_day or "—"),
         t("credit.price", price=data.credit_price or "0", currency=data.currency or "грн"),
@@ -77,7 +78,7 @@ async def do_get_credit(
     """Выполняет получение кредита."""
     try:
         result = await billing.client.get_credit(login, password_md5)
-        text = result.message or t("credit.success")
+        text = html.escape(result.message, quote=False) or t("credit.success")
     except Exception:
         text = t("errors.connection")
 

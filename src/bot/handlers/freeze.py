@@ -1,5 +1,6 @@
 """Обработчики раздела заморозки."""
 
+import html
 import logging
 from typing import Callable
 
@@ -82,7 +83,7 @@ async def do_freeze(
     try:
         result = await billing.client.freeze_user(login, password_md5)
         logger.debug("Результат заморозки: %r", result)
-        text = result.message or t("freeze.frozen")
+        text = html.escape(result.message, quote=False) or t("freeze.frozen")
     except Exception:
         logger.exception("Ошибка при заморозке аккаунта")
         text = t("errors.connection")
@@ -104,7 +105,7 @@ async def do_unfreeze(
     try:
         result = await billing.client.unfreeze_user(login, password_md5)
         logger.debug("Результат разморозки: %r", result)
-        text = result.message or t("freeze.unfrozen")
+        text = html.escape(result.message, quote=False) or t("freeze.unfrozen")
     except Exception:
         logger.exception("Ошибка при разморозке аккаунта")
         text = t("errors.connection")

@@ -1,5 +1,6 @@
 """Обработчики раздела платежей."""
 
+import html
 from datetime import date, timedelta
 from typing import Callable
 
@@ -176,7 +177,7 @@ async def process_pay_card(
 
     try:
         result = await billing.client.use_pay_card(login, password_md5, card_number)
-        text = result.message or t("payments.card_result")
+        text = html.escape(result.message, quote=False) or t("payments.card_result")
     except Exception:
         text = t("errors.connection")
 

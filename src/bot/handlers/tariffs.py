@@ -1,5 +1,6 @@
 """Обработчики раздела тарифов."""
 
+import html
 from typing import Callable
 
 from aiogram import F, Router
@@ -84,7 +85,7 @@ async def show_available_tariffs(
 
     lines = [t("tariffs.available_header"), ""]
     for tariff in tariffs:
-        lines.append(f"• {tariff.tariff_name}")
+        lines.append(f"• {html.escape(tariff.tariff_name, quote=False)}")
 
     kb = InlineKeyboardMarkup(inline_keyboard=[[back_button(t, "tariffs")]])
     await callback.message.edit_text("\n".join(lines), reply_markup=kb)

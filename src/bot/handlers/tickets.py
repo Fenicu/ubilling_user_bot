@@ -1,5 +1,6 @@
 """Обработчики раздела тикетов."""
 
+import html
 import logging
 from typing import Callable
 
@@ -55,8 +56,8 @@ async def show_tickets_list(
     for ticket in root_tickets[:5]:
         status = t("tickets.status_open") if not ticket.status else t("tickets.status_closed")
         lines.append(f"🎫 #{ticket.id} ({ticket.date or '—'})")
-        lines.append(f"   {status} | {ticket.from_user or '—'}")
-        lines.append(f"   «{(ticket.text or '')[:50]}...»")
+        lines.append(f"   {status} | {html.escape(ticket.from_user or '—', quote=False)}")
+        lines.append(f"   «{html.escape((ticket.text or '')[:50], quote=False)}...»")
         lines.append("")
 
     kb = tickets_menu_keyboard(t)
