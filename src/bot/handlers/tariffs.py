@@ -7,8 +7,9 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 
 from bot.keyboards import tariffs_menu_keyboard
-from bot.keyboards.common import back_button
+from bot.keyboards.common import back_button, pagination_keyboard
 from bot.services import BillingService
+from bot.utils.pagination import paginate
 
 router = Router()
 
@@ -101,7 +102,33 @@ async def show_all_tariffs(
     password_md5: str,
     **kwargs,
 ) -> None:
-    """Показывает все тарифы провайдера."""
+    """Показывает первую страницу всех тарифов провайдера."""
+    await _show_tariff_all_page(callback, t, billing, login, password_md5, 1)
+
+
+@router.callback_query(F.data.startswith("page:tariff_all:"))
+async def tariff_all_pagination(
+    callback: CallbackQuery,
+    t: Callable[..., str],
+    billing: BillingService,
+    login: str,
+    password_md5: str,
+    **kwargs,
+) -> None:
+    """Обработка пагинации списка всех тарифов."""
+    page = int(callback.data.split(":")[2])
+    await _show_tariff_all_page(callback, t, billing, login, password_md5, page)
+
+
+async def _show_tariff_all_page(
+    callback: CallbackQuery,
+    t: Callable[..., str],
+    billing: BillingService,
+    login: str,
+    password_md5: str,
+    page: int,
+) -> None:
+    """Отображает страницу списка всех тарифов."""
     try:
         services = await billing.client.get_active_tariffs_vservices(login, password_md5)
     except Exception:
@@ -112,10 +139,11 @@ async def show_all_tariffs(
         return
 
     tariffs = [s for s in services if s.is_tariff]
+    page_items, total_pages = paginate(tariffs, page)
     lines = [t("tariffs.all_header"), ""]
-    for tariff in tariffs[:20]:
+    for tariff in page_items:
         lines.append(t("tariffs.tariff_line", name=tariff.tariff_name, price=tariff.tariff_price, days=tariff.tariff_days_period))
 
-    kb = InlineKeyboardMarkup(inline_keyboard=[[back_button(t, "tariffs")]])
+    kb = pagination_keyboard(t, "tariff_all", page, total_pages, "tariffs")
     await callback.message.edit_text("\n".join(lines), reply_markup=kb)
     await callback.answer()
