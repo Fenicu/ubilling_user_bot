@@ -16,6 +16,7 @@ def pagination_keyboard(
     current_page: int,
     total_pages: int,
     back_callback: str = "menu",
+    extra_rows: list[list[InlineKeyboardButton]] | None = None,
 ) -> InlineKeyboardMarkup:
     """
     Создаёт клавиатуру с пагинацией.
@@ -26,23 +27,36 @@ def pagination_keyboard(
         current_page: Текущая страница (начиная с 1)
         total_pages: Общее количество страниц
         back_callback: Callback для кнопки назад
+        extra_rows: Дополнительные ряды кнопок между пагинацией и кнопкой «Назад»
     """
-    buttons: list[InlineKeyboardButton] = []
+    rows: list[list[InlineKeyboardButton]] = []
 
-    if current_page > 1:
+    if total_pages > 1:
+        buttons: list[InlineKeyboardButton] = []
+
+        if current_page > 1:
+            buttons.append(
+                InlineKeyboardButton(
+                    text="← ", callback_data=f"page:{section}:{current_page - 1}"
+                )
+            )
+
         buttons.append(
-            InlineKeyboardButton(text="← ", callback_data=f"page:{section}:{current_page - 1}")
+            InlineKeyboardButton(text=f"{current_page}/{total_pages}", callback_data="noop")
         )
 
-    buttons.append(
-        InlineKeyboardButton(text=f"{current_page}/{total_pages}", callback_data="noop")
-    )
+        if current_page < total_pages:
+            buttons.append(
+                InlineKeyboardButton(
+                    text=" →", callback_data=f"page:{section}:{current_page + 1}"
+                )
+            )
 
-    if current_page < total_pages:
-        buttons.append(
-            InlineKeyboardButton(text=" →", callback_data=f"page:{section}:{current_page + 1}")
-        )
+        rows.append(buttons)
 
-    return InlineKeyboardMarkup(
-        inline_keyboard=[buttons, [back_button(t, back_callback)]]
-    )
+    if extra_rows:
+        rows.extend(extra_rows)
+
+    rows.append([back_button(t, back_callback)])
+
+    return InlineKeyboardMarkup(inline_keyboard=rows)
