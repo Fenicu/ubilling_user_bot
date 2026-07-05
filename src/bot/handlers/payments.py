@@ -179,7 +179,7 @@ async def _show_fee_page(
     for c in page_items:
         lines.append(t("payments.fee_line", date=c.date or "—", fee=c.fee, tariff=c.tariff or "—"))
 
-    kb = pagination_keyboard(t, f"fee_{period}", page, total_pages, "payments")
+    kb = pagination_keyboard(t, f"fee_{period}", page, total_pages, "fee_history")
     await callback.message.edit_text("\n".join(lines), reply_markup=kb)
     await callback.answer()
 
