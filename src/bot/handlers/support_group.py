@@ -94,13 +94,15 @@ async def _close_as_operator(
     closed = await close_dialog(db, dialog.id, closed_by="operator")
 
     if closed:
-        locale = await user_locale(db, dialog.telegram_id)
-        t_user = partial(locale_service.get, locale)
         try:
+            locale = await user_locale(db, dialog.telegram_id)
+            t_user = partial(locale_service.get, locale)
             await bot.send_message(
                 dialog.telegram_id, t_user("support.closed_by_operator")
             )
         except Exception:
+            # Сбой SELECT локали мог оставить сессию невалидной — откатываем на всякий случай.
+            await _rollback_quietly(db)
             logger.exception(
                 "support_group: не удалось уведомить абонента %s о закрытии диалога %s",
                 dialog.telegram_id,
@@ -114,10 +116,11 @@ async def _close_as_operator(
                 message_id=dialog.card_message_id,
                 reply_markup=None,
             )
-        except TelegramBadRequest:
+        except Exception:
             logger.warning(
                 "support_group: не удалось убрать кнопку с карточки диалога %s",
                 dialog.id,
+                exc_info=True,
             )
 
     return closed
