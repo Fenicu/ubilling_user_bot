@@ -1,8 +1,9 @@
 """Тесты хелперов построения треда тикета."""
 
 import html
+import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from bot.utils.tickets import build_ticket_view, split_threads
 
@@ -13,6 +14,7 @@ FAKE_LOCALE = {
     "tickets.from": "От: {from_user}",
     "tickets.status_open": "открыт",
     "tickets.status_closed": "закрыт",
+    "menu.back": "← Назад",
 }
 
 
@@ -171,3 +173,59 @@ class TestBuildTicketView:
         result = build_ticket_view(fake_t, root, [])
 
         assert "💬 Ответы:" not in result
+
+    def test_budget_measured_on_escaped_root_text(self):
+        """Root из амперсандов: экранирование раздувает x5, карточка всё равно в бюджете."""
+        root = make_root(1, text="&" * 2000)
+
+        result = build_ticket_view(fake_t, root, [])
+
+        assert len(result) <= 3800
+
+    def test_truncated_escaped_root_has_no_broken_entity(self):
+        """Усечение экранированного root не оставляет обрывок HTML-entity перед многоточием."""
+        # 1 + 2000 амперсандов: после экранирования обрезка лимитом попадает внутрь entity
+        root = make_root(1, text="x" + "&" * 2000)
+
+        result = build_ticket_view(fake_t, root, [])
+
+        assert result.rstrip().endswith("…")
+        body_before_ellipsis = result.rstrip().rsplit("…", 1)[0]
+        assert re.search(r"&[a-zA-Z#0-9]*$", body_before_ellipsis) is None
+
+    def test_result_never_exceeds_budget_when_thread_truncated(self):
+        """Итоговая карточка не превышает бюджет ни при каком месте усечения треда."""
+        root = make_root(1, text="root")
+        replies = [
+            make_reply(
+                i + 2, 1, datetime(2026, 1, 2) + timedelta(days=i), text="r" * 40, from_user="u"
+            )
+            for i in range(10)
+        ]
+
+        header_len = len(build_ticket_view(fake_t, root, []))
+        for budget in range(header_len + 45, header_len + 800, 3):
+            result = build_ticket_view(fake_t, root, replies, budget=budget)
+            assert len(result) <= budget, f"budget={budget}, len={len(result)}"
+
+    def test_none_date_degrades_to_dash(self):
+        """Отсутствующая дата root не роняет сборку карточки, показывается прочерк."""
+        root = make_root(1, text="root", date=None)
+
+        result = build_ticket_view(fake_t, root, [])
+
+        assert "— · открыт" in result
+
+
+class TestTicketsListKeyboardDateGuard:
+    """Тесты guard'а даты в клавиатуре списка тикетов."""
+
+    def test_none_date_degrades_to_dash_in_button(self):
+        """Тикет без даты даёт кнопку с прочерком вместо AttributeError."""
+        from bot.keyboards.tickets import tickets_list_keyboard
+
+        ticket = make_root(9, text="root", date=None)
+
+        kb = tickets_list_keyboard(fake_t, [ticket], page=1, total_pages=1)
+
+        assert kb.inline_keyboard[0][0].text == "🎫 #9 · — · открыт"

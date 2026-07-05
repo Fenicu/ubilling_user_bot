@@ -1,11 +1,14 @@
 """Хелперы построения треда тикета."""
 
 import html
+import re
 from datetime import datetime
 from typing import Any, Callable
 
 ROOT_TEXT_LIMIT = 2000
 SEPARATOR = "\n\n"
+# обрывок HTML-entity в конце усечённой экранированной строки (полная entity кончается на ';')
+_BROKEN_ENTITY_RE = re.compile(r"&[a-zA-Z#0-9]*$")
 
 
 def split_threads(tickets: list[Any]) -> dict[int, list[Any]]:
@@ -22,15 +25,24 @@ def split_threads(tickets: list[Any]) -> dict[int, list[Any]]:
     return threads
 
 
-def _format_date(dt: datetime) -> str:
-    """Форматирует дату тикета для отображения."""
+def format_ticket_date(dt: datetime | None) -> str:
+    """Форматирует дату тикета; отсутствующая дата деградирует в прочерк."""
+    if not dt:
+        return "—"
     return dt.strftime("%Y-%m-%d %H:%M")
+
+
+def _truncate_escaped(text: str, limit: int) -> str:
+    """Обрезает уже экранированную строку, срезая возможный обрывок entity на конце."""
+    if len(text) <= limit:
+        return text
+    return _BROKEN_ENTITY_RE.sub("", text[:limit]) + "…"
 
 
 def _format_reply(reply: Any) -> str:
     """Форматирует одну запись треда: заголовок с автором + экранированный текст."""
     from_user = html.escape(reply.from_user or "—", quote=False)
-    header = f"#{reply.id} · {_format_date(reply.date)} · {from_user}:"
+    header = f"#{reply.id} · {format_ticket_date(reply.date)} · {from_user}:"
     body = html.escape(reply.text or "", quote=False)
     return f"{header}\n{body}"
 
@@ -41,22 +53,21 @@ def build_ticket_view(
     """
     Строит текст карточки тикета с учётом бюджета символов Telegram.
 
-    Root-текст показывается целиком (не более ROOT_TEXT_LIMIT символов, иначе
-    обрезается многоточием). Ответы треда добавляются от новейшего к старейшему,
-    пока укладываются в оставшийся бюджет; если тред влез не весь — первой строкой
-    треда добавляется отметка о количестве пропущенных ответов.
+    Все лимиты меряются по УЖЕ экранированному тексту — тому, что реально уходит
+    в Telegram. Root-текст показывается целиком (не более ROOT_TEXT_LIMIT символов,
+    иначе обрезается многоточием). Ответы треда добавляются от новейшего к старейшему,
+    пока укладываются в оставшийся бюджет; стоимость пометки об усечении резервируется
+    заранее по худшему случаю. Если тред влез не весь — первой строкой треда идёт
+    отметка о количестве пропущенных ответов.
     """
     status = t("tickets.status_closed") if root.status else t("tickets.status_open")
-    root_text_raw = root.text or ""
-    root_truncated = len(root_text_raw) > ROOT_TEXT_LIMIT
-    root_text = html.escape(root_text_raw[:ROOT_TEXT_LIMIT], quote=False)
-    if root_truncated:
-        root_text += "…"
+    root_text = html.escape(root.text or "", quote=False)
+    root_text = _truncate_escaped(root_text, ROOT_TEXT_LIMIT)
 
     header_text = "\n".join(
         [
             t("tickets.view_header", ticket_id=root.id),
-            f"{_format_date(root.date)} · {status}",
+            f"{format_ticket_date(root.date)} · {status}",
             t("tickets.from", from_user=root.from_user or "—"),
             "",
             root_text,
@@ -67,7 +78,15 @@ def build_ticket_view(
         return header_text
 
     replies_header = t("tickets.replies_header")
-    remaining = budget - len(header_text) - len(SEPARATOR) - len(replies_header)
+    worst_marker = t("tickets.thread_truncated", n=len(replies))
+    remaining = (
+        budget
+        - len(header_text)
+        - len(SEPARATOR)
+        - len(replies_header)
+        - len(SEPARATOR)
+        - len(worst_marker)
+    )
 
     fitting: list[str] = []
     for reply in reversed(replies):

@@ -67,16 +67,18 @@ async def _render_tickets_list(
     login: str,
     password_md5: str,
     page: int,
+    tickets: list | None = None,
 ) -> None:
-    """Рендерит страницу списка корневых тикетов в текущее сообщение."""
-    try:
-        tickets = await billing.client.get_tickets(login, password_md5)
-    except Exception:
-        logger.exception("Ошибка получения тикетов для login=%s", login)
-        await callback.message.edit_text(
-            t("errors.connection"), reply_markup=tickets_menu_keyboard(t)
-        )
-        return
+    """Рендерит страницу списка корневых тикетов; tickets — уже загруженный список, если есть."""
+    if tickets is None:
+        try:
+            tickets = await billing.client.get_tickets(login, password_md5)
+        except Exception:
+            logger.exception("Ошибка получения тикетов для login=%s", login)
+            await callback.message.edit_text(
+                t("errors.connection"), reply_markup=tickets_menu_keyboard(t)
+            )
+            return
 
     root_tickets = [tk for tk in tickets if tk.reply_id is None]
     if not root_tickets:
@@ -115,7 +117,7 @@ async def show_ticket_view(
     root = next((tk for tk in tickets if tk.id == ticket_id and tk.reply_id is None), None)
     if root is None:
         await callback.answer(t("tickets.not_found"), show_alert=True)
-        await _render_tickets_list(callback, t, billing, login, password_md5, 1)
+        await _render_tickets_list(callback, t, billing, login, password_md5, 1, tickets=tickets)
         return
 
     replies = split_threads(tickets).get(ticket_id, [])

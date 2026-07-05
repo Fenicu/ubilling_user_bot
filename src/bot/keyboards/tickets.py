@@ -5,6 +5,7 @@ from typing import Any, Callable
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from bot.keyboards.common import back_button
+from bot.utils.tickets import format_ticket_date
 
 
 def tickets_menu_keyboard(t: Callable[..., str]) -> InlineKeyboardMarkup:
@@ -33,7 +34,7 @@ def tickets_list_keyboard(
     rows: list[list[InlineKeyboardButton]] = []
     for ticket in tickets:
         status = t("tickets.status_closed") if ticket.status else t("tickets.status_open")
-        date_str = ticket.date.strftime("%Y-%m-%d %H:%M")
+        date_str = format_ticket_date(ticket.date)
         rows.append(
             [
                 InlineKeyboardButton(
