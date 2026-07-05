@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.config import settings
 from bot.db import SupportDialog, async_session
 from bot.i18n import LocaleService
+from bot.keyboards.support import menu_return_keyboard
 from bot.services.reactions import StatusReactions
 from bot.services.support import (
     close_dialog,
@@ -98,7 +99,9 @@ async def _close_as_operator(
             locale = await user_locale(db, dialog.telegram_id)
             t_user = partial(locale_service.get, locale)
             await bot.send_message(
-                dialog.telegram_id, t_user("support.closed_by_operator")
+                dialog.telegram_id,
+                t_user("support.closed_by_operator"),
+                reply_markup=menu_return_keyboard(t_user),
             )
         except Exception:
             # Сбой SELECT локали мог оставить сессию невалидной — откатываем на всякий случай.

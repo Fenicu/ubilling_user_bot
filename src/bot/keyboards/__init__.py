@@ -10,7 +10,11 @@ from bot.keyboards.payments import (
     payment_systems_keyboard,
     payments_menu_keyboard,
 )
-from bot.keyboards.support import support_card_keyboard, support_chat_keyboard
+from bot.keyboards.support import (
+    menu_return_keyboard,
+    support_card_keyboard,
+    support_chat_keyboard,
+)
 from bot.keyboards.tariffs import tariffs_menu_keyboard
 from bot.keyboards.tickets import (
     ticket_cancel_keyboard,
@@ -26,6 +30,7 @@ __all__ = [
     "freeze_menu_keyboard",
     "language_keyboard",
     "main_menu_keyboard",
+    "menu_return_keyboard",
     "pagination_keyboard",
     "pay_card_cancel_keyboard",
     "payment_systems_keyboard",

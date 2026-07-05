@@ -18,7 +18,11 @@ from bot.config import settings
 from bot.db import async_session
 from bot.handlers.menu import show_main_menu
 from bot.i18n import LocaleService
-from bot.keyboards.support import support_card_keyboard, support_chat_keyboard
+from bot.keyboards.support import (
+    menu_return_keyboard,
+    support_card_keyboard,
+    support_chat_keyboard,
+)
 from bot.services import BillingService
 from bot.services.reactions import StatusReactions
 from bot.services.support import (
@@ -183,7 +187,7 @@ async def close_support_by_user(
                     )
 
     await state.clear()
-    await callback.message.edit_text(t("support.closed"))
+    await callback.message.edit_text(t("support.closed"), reply_markup=menu_return_keyboard(t))
     await callback.answer()
 
 

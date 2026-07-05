@@ -175,7 +175,8 @@
     "close_btn": "🔚 End dialog",
     "menu_btn_exit": "🏠 Menu",
     "closed_by_operator": "✅ The operator has closed the support dialog.",
-    "autoclosed": "✅ The support dialog was automatically closed due to prolonged inactivity."
+    "autoclosed": "✅ The support dialog was automatically closed due to prolonged inactivity.",
+    "menu_return_btn": "🏠 Back to menu"
   },
   "support_group": {
     "relay_header": "{hashtag} · {realname}",

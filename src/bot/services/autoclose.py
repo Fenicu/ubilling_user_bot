@@ -11,6 +11,7 @@ from aiogram.exceptions import TelegramForbiddenError
 from bot.config import settings
 from bot.db import SupportDialog, async_session
 from bot.i18n import LocaleService
+from bot.keyboards.support import menu_return_keyboard
 from bot.services.support import close_dialog, dialogs_to_autoclose, record_message, user_locale
 from bot.utils.support import autoclose_cutoff
 
@@ -34,7 +35,11 @@ async def _autoclose_one(bot: Bot, locale_service: LocaleService, dialog: Suppor
 
         t_user = partial(locale_service.get, locale)
         try:
-            await bot.send_message(dialog.telegram_id, t_user("support.autoclosed"))
+            await bot.send_message(
+                dialog.telegram_id,
+                t_user("support.autoclosed"),
+                reply_markup=menu_return_keyboard(t_user),
+            )
         except TelegramForbiddenError:
             logger.warning(
                 "autoclose: абонент %s заблокировал бота, уведомление о закрытии диалога %s не доставлено",

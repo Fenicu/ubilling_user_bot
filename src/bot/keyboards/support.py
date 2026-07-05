@@ -15,6 +15,19 @@ def support_chat_keyboard(t: Callable[..., str]) -> InlineKeyboardMarkup:
     )
 
 
+def menu_return_keyboard(t: Callable[..., str]) -> InlineKeyboardMarkup:
+    """Клавиатура с одной кнопкой возврата в меню после завершения диалога с поддержкой."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=t("support.menu_return_btn"), callback_data="sup_menu_exit"
+                )
+            ],
+        ]
+    )
+
+
 def support_card_keyboard(t: Callable[..., str], dialog_id: int) -> InlineKeyboardMarkup:
     """Клавиатура карточки абонента в топике поддержки: закрыть диалог."""
     return InlineKeyboardMarkup(
