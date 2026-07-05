@@ -21,10 +21,3 @@ class PayCardForm(StatesGroup):
     """Состояние для активации карты оплаты."""
 
     waiting_card_number = State()
-
-
-class FeeChargeFilter(StatesGroup):
-    """Состояния для фильтрации списаний по датам."""
-
-    waiting_date_from = State()
-    waiting_date_to = State()
