@@ -47,7 +47,9 @@ class StatusReactions:
         Логика: если роль уже помечена сбойной — сразу дефолт. Иначе пробуем настроенную;
         TelegramBadRequest → warning-лог, роль помечается сбойной (in-memory, до рестарта),
         ставим дефолт роли. TelegramRetryAfter → return False (не ждём: best-effort, пачку
-        прерывает вызывающий). Любая ошибка на дефолте → warning, False.
+        прерывает вызывающий). Любая другая ошибка на настроенной → warning, False, роль
+        сбойной НЕ помечается (ошибка транзиентная, конфиг не виноват — следующий вызов
+        снова пробует настроенную). Любая ошибка на дефолте → warning, False.
         """
         if role not in self._broken_roles:
             try:
@@ -62,6 +64,13 @@ class StatusReactions:
                     role,
                 )
                 self._broken_roles.add(role)
+            except Exception:
+                logger.warning(
+                    "support.reaction: неожиданная ошибка при установке реакции роли %r",
+                    role,
+                    exc_info=True,
+                )
+                return False
 
         try:
             await self._apply(chat_id, message_id, DEFAULT_REACTIONS[role])

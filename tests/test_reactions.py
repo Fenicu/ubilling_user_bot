@@ -1,7 +1,11 @@
 """Тесты статусных реакций чата поддержки."""
 
 import pytest
-from aiogram.exceptions import TelegramBadRequest, TelegramRetryAfter
+from aiogram.exceptions import (
+    TelegramBadRequest,
+    TelegramForbiddenError,
+    TelegramRetryAfter,
+)
 from aiogram.types import ReactionTypeCustomEmoji, ReactionTypeEmoji
 
 from bot.services.reactions import StatusReactions, resolve_reaction
@@ -80,3 +84,25 @@ async def test_set_gives_up_on_retry_after():
 
     assert result is False
     assert len(bot.calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_set_returns_false_on_unexpected_error():
+    """Неожиданная ошибка на настроенной попытке — False без исключения, роль не помечается сбойной."""
+    forbidden = TelegramForbiddenError(method=object(), message="bot was kicked")
+    bot = FakeBot(fail_first_with=forbidden)
+    config = {"unanswered": "👀", "answered": "5368324170671202286", "undelivered": "💔"}
+    service = StatusReactions(bot, config)
+
+    result = await service.set(chat_id=1, message_id=2, role="answered")
+
+    assert result is False
+    assert len(bot.calls) == 1
+
+    result_second = await service.set(chat_id=1, message_id=3, role="answered")
+
+    assert result_second is True
+    assert len(bot.calls) == 2
+    reaction = bot.calls[1][2]
+    assert isinstance(reaction[0], ReactionTypeCustomEmoji)
+    assert reaction[0].custom_emoji_id == "5368324170671202286"
