@@ -204,7 +204,12 @@ async def relay_message(
     async with async_session() as db:
         dialog, created = await get_or_create_open_dialog(db, telegram_id, login)
 
-        if created:
+        # dialog.card_message_id is None у существующего диалога значит, что предыдущая
+        # попытка отправить карточку сорвалась (упала после коммита диалога) — пробуем
+        # ещё раз на следующем сообщении, а не оставляем диалог без карточки навсегда.
+        # first_ack абоненту — только для по-настоящему нового диалога (created), чтобы
+        # не шуметь повторным «Передано оператору» на каждом сообщении без карточки.
+        if created or dialog.card_message_id is None:
             try:
                 user, services = await asyncio.gather(
                     billing.client.get_user_info(login, password_md5),
@@ -246,7 +251,9 @@ async def relay_message(
                 t_default,
                 card_msg.message_id,
             )
-            await message.answer(t("support.first_ack"))
+
+            if created:
+                await message.answer(t("support.first_ack"))
 
         header = build_relay_header(t_default, login, None)
 
