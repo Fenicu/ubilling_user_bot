@@ -6,8 +6,9 @@ from typing import Callable
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 
-from bot.keyboards.common import back_button
+from bot.keyboards.common import back_button, pagination_keyboard
 from bot.services import BillingService
+from bot.utils.pagination import paginate
 
 router = Router()
 
@@ -21,7 +22,33 @@ async def show_announcements(
     password_md5: str,
     **kwargs,
 ) -> None:
-    """Показывает список объявлений."""
+    """Показывает первую страницу списка объявлений."""
+    await _show_announcements_page(callback, t, billing, login, password_md5, 1)
+
+
+@router.callback_query(F.data.startswith("page:announcements:"))
+async def announcements_pagination(
+    callback: CallbackQuery,
+    t: Callable[..., str],
+    billing: BillingService,
+    login: str,
+    password_md5: str,
+    **kwargs,
+) -> None:
+    """Обработка пагинации объявлений."""
+    page = int(callback.data.split(":")[2])
+    await _show_announcements_page(callback, t, billing, login, password_md5, page)
+
+
+async def _show_announcements_page(
+    callback: CallbackQuery,
+    t: Callable[..., str],
+    billing: BillingService,
+    login: str,
+    password_md5: str,
+    page: int,
+) -> None:
+    """Отображает страницу списка объявлений."""
     try:
         announcements = await billing.client.get_announcements(login, password_md5)
     except Exception:
@@ -36,17 +63,20 @@ async def show_announcements(
         await callback.answer()
         return
 
+    page_items, total_pages = paginate(announcements, page, page_size=5)
     lines = [t("announcements.header"), ""]
-    for ann in announcements[:5]:
+    for ann in page_items:
         lines.append(f"📢 {html.escape(ann.title or '—', quote=False)}")
         lines.append(html.escape(ann.text or "", quote=False))
         lines.append("───")
 
-    kb = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text=t("announcements.mark_read"), callback_data="mark_announcements_read")],
-            [back_button(t, "menu")],
-        ]
+    mark_read_row = [
+        InlineKeyboardButton(
+            text=t("announcements.mark_read"), callback_data="mark_announcements_read"
+        )
+    ]
+    kb = pagination_keyboard(
+        t, "announcements", page, total_pages, "menu", extra_rows=[mark_read_row]
     )
     await callback.message.edit_text("\n".join(lines), reply_markup=kb)
     await callback.answer()
