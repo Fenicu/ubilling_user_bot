@@ -13,6 +13,9 @@ dependencies = [
     "pyubilling @ git+https://github.com/Fenicu/UbillingWrapper",
 ]
 
+[dependency-groups]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.25"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
