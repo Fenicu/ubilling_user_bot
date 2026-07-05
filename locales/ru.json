@@ -80,7 +80,13 @@
     "create_error": "❌ Ошибка создания тикета.",
     "enter_reply": "Введите ответ на тикет #{ticket_id}:",
     "reply_sent": "✅ Ответ отправлен!",
-    "reply_error": "❌ Ошибка отправки ответа."
+    "reply_error": "❌ Ошибка отправки ответа.",
+    "list_hint": "Выберите тикет:",
+    "view_header": "🎫 Тикет #{ticket_id}",
+    "replies_header": "💬 Ответы:",
+    "thread_truncated": "… показаны не все ответы ({n})",
+    "not_found": "Тикет не найден.",
+    "from": "От: {from_user}"
   },
   "announcements": {
     "header": "📢 Объявления",

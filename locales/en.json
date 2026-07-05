@@ -80,7 +80,13 @@
     "create_error": "❌ Error creating ticket.",
     "enter_reply": "Enter reply for ticket #{ticket_id}:",
     "reply_sent": "✅ Reply sent!",
-    "reply_error": "❌ Error sending reply."
+    "reply_error": "❌ Error sending reply.",
+    "list_hint": "Select a ticket:",
+    "view_header": "🎫 Ticket #{ticket_id}",
+    "replies_header": "💬 Replies:",
+    "thread_truncated": "… not all replies shown ({n})",
+    "not_found": "Ticket not found.",
+    "from": "From: {from_user}"
   },
   "announcements": {
     "header": "📢 Announcements",

@@ -80,7 +80,13 @@
     "create_error": "❌ Помилка створення тікету.",
     "enter_reply": "Введіть відповідь на тікет #{ticket_id}:",
     "reply_sent": "✅ Відповідь надіслано!",
-    "reply_error": "❌ Помилка надсилання відповіді."
+    "reply_error": "❌ Помилка надсилання відповіді.",
+    "list_hint": "Оберіть тікет:",
+    "view_header": "🎫 Тікет #{ticket_id}",
+    "replies_header": "💬 Відповіді:",
+    "thread_truncated": "… показано не всі відповіді ({n})",
+    "not_found": "Тікет не знайдено.",
+    "from": "Від: {from_user}"
   },
   "announcements": {
     "header": "📢 Оголошення",

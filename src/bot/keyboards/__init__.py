@@ -13,7 +13,8 @@ from bot.keyboards.payments import (
 from bot.keyboards.tariffs import tariffs_menu_keyboard
 from bot.keyboards.tickets import (
     ticket_cancel_keyboard,
-    ticket_reply_keyboard,
+    ticket_view_keyboard,
+    tickets_list_keyboard,
     tickets_menu_keyboard,
 )
 
@@ -30,6 +31,7 @@ __all__ = [
     "payments_menu_keyboard",
     "tariffs_menu_keyboard",
     "ticket_cancel_keyboard",
-    "ticket_reply_keyboard",
+    "ticket_view_keyboard",
+    "tickets_list_keyboard",
     "tickets_menu_keyboard",
 ]

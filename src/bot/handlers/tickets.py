@@ -1,6 +1,5 @@
 """Обработчики раздела тикетов."""
 
-import html
 import logging
 from typing import Callable
 
@@ -8,12 +7,21 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from bot.keyboards import ticket_cancel_keyboard, ticket_reply_keyboard, tickets_menu_keyboard
+from bot.keyboards import (
+    ticket_cancel_keyboard,
+    ticket_view_keyboard,
+    tickets_list_keyboard,
+    tickets_menu_keyboard,
+)
 from bot.services import BillingService
 from bot.states import TicketForm
+from bot.utils.pagination import paginate
+from bot.utils.tickets import build_ticket_view, split_threads
 
 logger = logging.getLogger(__name__)
 router = Router()
+
+TICKETS_PAGE_SIZE = 5
 
 
 @router.callback_query(F.data == "tickets")
@@ -32,7 +40,68 @@ async def show_tickets_list(
     password_md5: str,
     **kwargs,
 ) -> None:
-    """Показывает список тикетов."""
+    """Показывает первую страницу списка тикетов."""
+    await _render_tickets_list(callback, t, billing, login, password_md5, 1)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("page:tickets:"))
+async def tickets_pagination(
+    callback: CallbackQuery,
+    t: Callable[..., str],
+    billing: BillingService,
+    login: str,
+    password_md5: str,
+    **kwargs,
+) -> None:
+    """Обработка пагинации списка тикетов."""
+    page = int(callback.data.split(":")[2])
+    await _render_tickets_list(callback, t, billing, login, password_md5, page)
+    await callback.answer()
+
+
+async def _render_tickets_list(
+    callback: CallbackQuery,
+    t: Callable[..., str],
+    billing: BillingService,
+    login: str,
+    password_md5: str,
+    page: int,
+) -> None:
+    """Рендерит страницу списка корневых тикетов в текущее сообщение."""
+    try:
+        tickets = await billing.client.get_tickets(login, password_md5)
+    except Exception:
+        logger.exception("Ошибка получения тикетов для login=%s", login)
+        await callback.message.edit_text(
+            t("errors.connection"), reply_markup=tickets_menu_keyboard(t)
+        )
+        return
+
+    root_tickets = [tk for tk in tickets if tk.reply_id is None]
+    if not root_tickets:
+        await callback.message.edit_text(
+            t("tickets.no_tickets"), reply_markup=tickets_menu_keyboard(t)
+        )
+        return
+
+    page_items, total_pages = paginate(root_tickets, page, page_size=TICKETS_PAGE_SIZE)
+    kb = tickets_list_keyboard(t, page_items, page, total_pages)
+    await callback.message.edit_text(t("tickets.list_hint"), reply_markup=kb)
+
+
+@router.callback_query(F.data.startswith("ticket_view:"))
+async def show_ticket_view(
+    callback: CallbackQuery,
+    t: Callable[..., str],
+    billing: BillingService,
+    login: str,
+    password_md5: str,
+    **kwargs,
+) -> None:
+    """Показывает карточку тикета с треда ответов."""
+    ticket_id = int(callback.data.split(":")[1])
+
     try:
         tickets = await billing.client.get_tickets(login, password_md5)
     except Exception:
@@ -43,29 +112,16 @@ async def show_tickets_list(
         await callback.answer()
         return
 
-    if not tickets:
-        await callback.message.edit_text(
-            t("tickets.no_tickets"), reply_markup=tickets_menu_keyboard(t)
-        )
-        await callback.answer()
+    root = next((tk for tk in tickets if tk.id == ticket_id and tk.reply_id is None), None)
+    if root is None:
+        await callback.answer(t("tickets.not_found"), show_alert=True)
+        await _render_tickets_list(callback, t, billing, login, password_md5, 1)
         return
 
-    root_tickets = [tk for tk in tickets if tk.reply_id is None]
-    lines = [t("tickets.list_header"), ""]
+    replies = split_threads(tickets).get(ticket_id, [])
+    text = build_ticket_view(t, root, replies)
 
-    for ticket in root_tickets[:5]:
-        status = t("tickets.status_open") if not ticket.status else t("tickets.status_closed")
-        lines.append(f"🎫 #{ticket.id} ({ticket.date or '—'})")
-        lines.append(f"   {status} | {html.escape(ticket.from_user or '—', quote=False)}")
-        lines.append(f"   «{html.escape((ticket.text or '')[:50], quote=False)}...»")
-        lines.append("")
-
-    kb = tickets_menu_keyboard(t)
-    if root_tickets:
-        first_ticket = root_tickets[0]
-        kb = ticket_reply_keyboard(t, first_ticket.id)
-
-    await callback.message.edit_text("\n".join(lines), reply_markup=kb)
+    await callback.message.edit_text(text, reply_markup=ticket_view_keyboard(t, ticket_id))
     await callback.answer()
 
 
