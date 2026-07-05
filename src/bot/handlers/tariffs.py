@@ -9,7 +9,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from bot.keyboards import tariffs_menu_keyboard
 from bot.keyboards.common import back_button, pagination_keyboard
 from bot.services import BillingService
-from bot.utils.pagination import paginate
+from bot.utils.pagination import paginate, parse_page_callback
 
 router = Router()
 
@@ -116,7 +116,10 @@ async def tariff_all_pagination(
     **kwargs,
 ) -> None:
     """Обработка пагинации списка всех тарифов."""
-    page = int(callback.data.split(":")[2])
+    page = parse_page_callback(callback.data)
+    if page is None:
+        await callback.answer()
+        return
     await _show_tariff_all_page(callback, t, billing, login, password_md5, page)
 
 
@@ -139,7 +142,7 @@ async def _show_tariff_all_page(
         return
 
     tariffs = [s for s in services if s.is_tariff]
-    page_items, total_pages = paginate(tariffs, page)
+    page_items, page, total_pages = paginate(tariffs, page)
     lines = [t("tariffs.all_header"), ""]
     for tariff in page_items:
         lines.append(t("tariffs.tariff_line", name=tariff.tariff_name, price=tariff.tariff_price, days=tariff.tariff_days_period))

@@ -8,7 +8,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 
 from bot.keyboards.common import back_button, pagination_keyboard
 from bot.services import BillingService
-from bot.utils.pagination import paginate
+from bot.utils.pagination import paginate, parse_page_callback
 
 router = Router()
 
@@ -36,7 +36,10 @@ async def announcements_pagination(
     **kwargs,
 ) -> None:
     """Обработка пагинации объявлений."""
-    page = int(callback.data.split(":")[2])
+    page = parse_page_callback(callback.data)
+    if page is None:
+        await callback.answer()
+        return
     await _show_announcements_page(callback, t, billing, login, password_md5, page)
 
 
@@ -63,7 +66,7 @@ async def _show_announcements_page(
         await callback.answer()
         return
 
-    page_items, total_pages = paginate(announcements, page, page_size=5)
+    page_items, page, total_pages = paginate(announcements, page, page_size=5)
     lines = [t("announcements.header"), ""]
     for ann in page_items:
         lines.append(f"📢 {html.escape(ann.title or '—', quote=False)}")

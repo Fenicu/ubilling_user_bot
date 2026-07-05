@@ -15,7 +15,7 @@ from bot.keyboards import (
 )
 from bot.services import BillingService
 from bot.states import TicketForm
-from bot.utils.pagination import paginate
+from bot.utils.pagination import paginate, parse_page_callback
 from bot.utils.tickets import build_ticket_view, split_threads
 
 logger = logging.getLogger(__name__)
@@ -55,7 +55,10 @@ async def tickets_pagination(
     **kwargs,
 ) -> None:
     """Обработка пагинации списка тикетов."""
-    page = int(callback.data.split(":")[2])
+    page = parse_page_callback(callback.data)
+    if page is None:
+        await callback.answer()
+        return
     await _render_tickets_list(callback, t, billing, login, password_md5, page)
     await callback.answer()
 
@@ -87,7 +90,7 @@ async def _render_tickets_list(
         )
         return
 
-    page_items, total_pages = paginate(root_tickets, page, page_size=TICKETS_PAGE_SIZE)
+    page_items, page, total_pages = paginate(root_tickets, page, page_size=TICKETS_PAGE_SIZE)
     kb = tickets_list_keyboard(t, page_items, page, total_pages)
     await callback.message.edit_text(t("tickets.list_hint"), reply_markup=kb)
 
@@ -102,7 +105,10 @@ async def show_ticket_view(
     **kwargs,
 ) -> None:
     """Показывает карточку тикета с треда ответов."""
-    ticket_id = int(callback.data.split(":")[1])
+    ticket_id = parse_page_callback(callback.data)
+    if ticket_id is None:
+        await callback.answer()
+        return
 
     try:
         tickets = await billing.client.get_tickets(login, password_md5)
@@ -165,7 +171,10 @@ async def start_ticket_reply(
     callback: CallbackQuery, state: FSMContext, t: Callable[..., str], **kwargs
 ) -> None:
     """Начинает ответ на тикет."""
-    ticket_id = int(callback.data.split(":")[1])
+    ticket_id = parse_page_callback(callback.data)
+    if ticket_id is None:
+        await callback.answer()
+        return
     await state.update_data(reply_ticket_id=ticket_id)
     await state.set_state(TicketForm.waiting_reply_text)
     await callback.message.edit_text(

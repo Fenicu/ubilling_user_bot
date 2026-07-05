@@ -17,7 +17,7 @@ from bot.keyboards import (
 from bot.keyboards.common import pagination_keyboard
 from bot.services import BillingService
 from bot.states import PayCardForm
-from bot.utils.pagination import paginate
+from bot.utils.pagination import paginate, parse_page_callback
 
 router = Router()
 
@@ -67,7 +67,10 @@ async def payments_pagination(
     **kwargs,
 ) -> None:
     """Обработка пагинации платежей."""
-    page = int(callback.data.split(":")[2])
+    page = parse_page_callback(callback.data)
+    if page is None:
+        await callback.answer()
+        return
     await _show_payments_page(callback, t, billing, login, password_md5, page)
 
 
@@ -99,7 +102,7 @@ async def _show_payments_page(
         await callback.answer()
         return
 
-    page_items, total_pages = paginate(payments, page)
+    page_items, page, total_pages = paginate(payments, page)
     lines = [t("payments.history_title"), ""]
     for p in page_items:
         lines.append(t("payments.payment_line", date=p.date or "—", summ=p.summ, balance=p.balance or "—"))
@@ -140,9 +143,13 @@ async def fee_pagination(
     **kwargs,
 ) -> None:
     """Обработка пагинации истории списаний."""
-    _, section, page_str = callback.data.split(":")
+    page = parse_page_callback(callback.data)
+    if page is None:
+        await callback.answer()
+        return
+    _, section, _ = callback.data.split(":")
     period = section.removeprefix("fee_")
-    await _show_fee_page(callback, t, billing, login, password_md5, period, int(page_str))
+    await _show_fee_page(callback, t, billing, login, password_md5, period, page)
 
 
 async def _show_fee_page(
@@ -174,7 +181,7 @@ async def _show_fee_page(
         await callback.answer()
         return
 
-    page_items, total_pages = paginate(charges, page)
+    page_items, page, total_pages = paginate(charges, page)
     lines = [t("payments.fee_title", date_from=date_from, date_to=date_to), ""]
     for c in page_items:
         lines.append(t("payments.fee_line", date=c.date or "—", fee=c.fee, tariff=c.tariff or "—"))
