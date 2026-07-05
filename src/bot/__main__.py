@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from contextlib import suppress
 from pathlib import Path
 
 from aiogram import Bot, Dispatcher
@@ -17,6 +18,7 @@ from bot.handlers import setup_routers
 from bot.i18n import LocaleService
 from bot.middlewares import AuthMiddleware, LocaleMiddleware
 from bot.services import BillingService
+from bot.services.autoclose import autoclose_loop
 from bot.services.reactions import StatusReactions
 
 logging.basicConfig(
@@ -60,6 +62,7 @@ async def main() -> None:
     dp["billing"] = billing
     dp["locale_service"] = locale_service
 
+    autoclose_task: asyncio.Task | None = None
     if settings.support_enabled:
         dp["reactions"] = StatusReactions(
             bot,
@@ -70,6 +73,9 @@ async def main() -> None:
             },
         )
         logger.info("Чат поддержки включён: chat_id=%s", settings.support_chat_id)
+
+        if settings.support_autoclose_hours > 0:
+            autoclose_task = asyncio.create_task(autoclose_loop(bot, locale_service))
 
     dp.message.middleware(LocaleMiddleware(locale_service))
     dp.callback_query.middleware(LocaleMiddleware(locale_service))
@@ -86,6 +92,10 @@ async def main() -> None:
         logger.info("Бот запущен")
         await dp.start_polling(bot)
     finally:
+        if autoclose_task is not None:
+            autoclose_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await autoclose_task
         await billing.stop()
         await bot.session.close()
         await storage.close()
