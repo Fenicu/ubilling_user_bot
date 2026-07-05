@@ -21,3 +21,9 @@ class PayCardForm(StatesGroup):
     """Состояние для активации карты оплаты."""
 
     waiting_card_number = State()
+
+
+class SupportForm(StatesGroup):
+    """Состояние активного диалога с поддержкой."""
+
+    chatting = State()

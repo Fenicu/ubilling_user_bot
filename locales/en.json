@@ -164,5 +164,28 @@
     "connection": "❌ Server connection error. Please try later.",
     "auth_failed": "❌ Authorization error.",
     "unknown": "❌ Unknown error."
+  },
+  "support": {
+    "menu_btn": "💬 Support",
+    "invite": "💬 Describe your problem in one or more messages — an operator will reply right here in this chat.",
+    "first_ack": "✅ Your message has been sent to support. Keep writing here — the operator will reply in this same chat.",
+    "closed": "✅ Support dialog closed.",
+    "unsupported_type": "❌ This message type is not supported yet. Please send text, photo, video, document, voice, video note, audio, or sticker.",
+    "relay_error": "❌ Failed to send your message to support. Please try again shortly.",
+    "close_btn": "🔚 End dialog",
+    "menu_btn_exit": "🏠 Menu"
+  },
+  "support_group": {
+    "relay_header": "{hashtag} · {realname}",
+    "card_stub": "🎫 {hashtag}\n👤 Login: {login} (ID: {telegram_id})\n⚠️ Profile not found",
+    "card_hashtag": "🎫 {hashtag}",
+    "card_realname": "👤 {realname}",
+    "card_balance": "💰 Balance: {cash} {currency}",
+    "card_tariff": "📋 Tariff: {tariff_name}",
+    "card_status": "📡 Status: {account_state}",
+    "card_ip": "🌐 IP: {ip}",
+    "card_close_btn": "🔒 Close dialog",
+    "closed_by_user": "✅ Subscriber closed the dialog.",
+    "orphan_notice": "⚠️ The message above was sent, but linking it to the dialog failed. Check manually."
   }
 }

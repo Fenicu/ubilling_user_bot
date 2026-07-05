@@ -17,6 +17,7 @@ from bot.handlers import setup_routers
 from bot.i18n import LocaleService
 from bot.middlewares import AuthMiddleware, LocaleMiddleware
 from bot.services import BillingService
+from bot.services.reactions import StatusReactions
 
 logging.basicConfig(
     level=getattr(logging, settings.log_level.upper(), logging.INFO),
@@ -58,6 +59,17 @@ async def main() -> None:
 
     dp["billing"] = billing
     dp["locale_service"] = locale_service
+
+    if settings.support_enabled:
+        dp["reactions"] = StatusReactions(
+            bot,
+            {
+                "unanswered": settings.support_reaction_unanswered,
+                "answered": settings.support_reaction_answered,
+                "undelivered": settings.support_reaction_undelivered,
+            },
+        )
+        logger.info("Чат поддержки включён: chat_id=%s", settings.support_chat_id)
 
     dp.message.middleware(LocaleMiddleware(locale_service))
     dp.callback_query.middleware(LocaleMiddleware(locale_service))

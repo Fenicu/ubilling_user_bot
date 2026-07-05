@@ -1,5 +1,5 @@
 """FSM состояния."""
 
-from bot.states.forms import AuthForm, PayCardForm, TicketForm
+from bot.states.forms import AuthForm, PayCardForm, SupportForm, TicketForm
 
-__all__ = ["AuthForm", "PayCardForm", "TicketForm"]
+__all__ = ["AuthForm", "PayCardForm", "SupportForm", "TicketForm"]

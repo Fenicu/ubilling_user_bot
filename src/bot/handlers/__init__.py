@@ -2,6 +2,7 @@
 
 from aiogram import Router
 
+from bot.config import settings
 from bot.handlers import (
     announcements,
     credit,
@@ -11,6 +12,7 @@ from bot.handlers import (
     menu,
     payments,
     start,
+    support_user,
     tariffs,
     tickets,
 )
@@ -29,4 +31,9 @@ def setup_routers() -> Router:
     router.include_router(credit.router)
     router.include_router(info.router)
     router.include_router(language.router)
+    if settings.support_enabled:
+        router.include_router(support_user.router)
+        # Catch-all перехватывает любое сообщение при открытом диалоге — должен идти последним,
+        # чтобы не перекрывать более специфичные хендлеры (команды, другие FSM).
+        router.include_router(support_user.catchall_router)
     return router
