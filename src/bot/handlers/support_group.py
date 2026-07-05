@@ -235,7 +235,7 @@ async def relay_operator_message(
         if found is None:
             return
 
-        _, dialog = found
+        replied_message, dialog = found
 
         if message.content_type not in SUPPORTED_CONTENT_TYPES:
             await message.reply(t("support_group.unsupported_type"))
@@ -286,9 +286,12 @@ async def relay_operator_message(
             dialog.id,
         )
 
-        batch = await unanswered_inbound(
-            db, dialog.id, up_to_group_message_id=reply.message_id
-        )
+        # Реплай на карточку абонента или шапку медиа (direction='service') не имеет
+        # собственной позиции среди inbound — такие сообщения постятся раньше настоящей
+        # inbound-копии, и её message_id их message_id не может ограничить сверху.
+        # up_to=None отмечает отвеченными все неотвеченные inbound диалога целиком.
+        up_to = None if replied_message.direction == "service" else reply.message_id
+        batch = await unanswered_inbound(db, dialog.id, up_to_group_message_id=up_to)
         if batch:
             await _write_or_rollback(
                 mark_answered(db, [m.id for m in batch]),

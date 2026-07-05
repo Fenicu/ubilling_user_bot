@@ -93,23 +93,26 @@ async def find_by_group_message(
 
 
 async def unanswered_inbound(
-    db: AsyncSession, dialog_id: int, up_to_group_message_id: int
+    db: AsyncSession, dialog_id: int, up_to_group_message_id: int | None
 ) -> list[SupportMessage]:
     """
     Неотвеченные входящие сообщения диалога до указанного (включительно).
 
     message_id в чате монотонно растёт — group_message_id <= up_to_group_message_id
-    и есть «более ранние или это же» сообщения.
+    и есть «более ранние или это же» сообщения. up_to_group_message_id=None — без
+    верхней границы (все неотвеченные inbound диалога): нужно для реплая на карточку
+    или шапку медиа — у них нет собственной позиции среди входящих сообщений диалога.
     """
+    conditions = [
+        SupportMessage.dialog_id == dialog_id,
+        SupportMessage.direction == "inbound",
+        SupportMessage.answered.is_(False),
+    ]
+    if up_to_group_message_id is not None:
+        conditions.append(SupportMessage.group_message_id <= up_to_group_message_id)
+
     result = await db.execute(
-        select(SupportMessage)
-        .where(
-            SupportMessage.dialog_id == dialog_id,
-            SupportMessage.direction == "inbound",
-            SupportMessage.answered.is_(False),
-            SupportMessage.group_message_id <= up_to_group_message_id,
-        )
-        .order_by(SupportMessage.created_at)
+        select(SupportMessage).where(*conditions).order_by(SupportMessage.created_at)
     )
     return list(result.scalars().all())
 
