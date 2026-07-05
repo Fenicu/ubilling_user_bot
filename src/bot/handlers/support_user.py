@@ -12,6 +12,7 @@ from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import BaseFilter, Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.config import settings
 from bot.db import async_session
@@ -73,8 +74,17 @@ async def _notify_orphan(bot, t_default: Callable[..., str], reply_to_message_id
         logger.exception("support: не удалось отправить orphan-нотис в топик поддержки")
 
 
+async def _rollback_quietly(db: AsyncSession) -> None:
+    """Откатывает сессию после сбоя записи; сбой самого rollback только логируем."""
+    try:
+        await db.rollback()
+    except Exception:
+        logger.warning("support: не удалось откатить сессию после сбоя записи", exc_info=True)
+
+
 async def _db_write_or_notify(
     coro: Coroutine,
+    db: AsyncSession,
     bot,
     t_default: Callable[..., str],
     group_message_id: int,
@@ -82,12 +92,14 @@ async def _db_write_or_notify(
     """
     Выполняет мутирующую запись сервиса поддержки после успешной отправки в Telegram.
 
-    При сбое — лог error + reply-нотис в топик (см. спеку: абоненту сбой записи не показываем,
-    сообщение в группу уже ушло успешно).
+    При сбое — rollback сессии (иначе последующие вызовы на ней падают с
+    PendingRollbackError, маскируя причину), лог error + reply-нотис в топик
+    (см. спеку: абоненту сбой записи не показываем, сообщение в группу уже ушло успешно).
     """
     try:
         await coro
     except Exception:
+        await _rollback_quietly(db)
         logger.error(
             "support: сбой записи в БД после успешной отправки сообщения %s в топик",
             group_message_id,
@@ -222,12 +234,14 @@ async def relay_message(
 
             await _db_write_or_notify(
                 record_message(db, dialog.id, card_msg.message_id, "service"),
+                db,
                 bot,
                 t_default,
                 card_msg.message_id,
             )
             await _db_write_or_notify(
                 set_card_message(db, dialog.id, card_msg.message_id),
+                db,
                 bot,
                 t_default,
                 card_msg.message_id,
@@ -254,6 +268,7 @@ async def relay_message(
                 record_message(
                     db, dialog.id, inbound_message_id, "inbound", user_message_id=message.message_id
                 ),
+                db,
                 bot,
                 t_default,
                 inbound_message_id,
@@ -272,6 +287,7 @@ async def relay_message(
 
             await _db_write_or_notify(
                 record_message(db, dialog.id, header_msg.message_id, "service"),
+                db,
                 bot,
                 t_default,
                 header_msg.message_id,
@@ -294,13 +310,21 @@ async def relay_message(
                 record_message(
                     db, dialog.id, inbound_message_id, "inbound", user_message_id=message.message_id
                 ),
+                db,
                 bot,
                 t_default,
                 inbound_message_id,
             )
 
         await reactions.set(settings.support_chat_id, inbound_message_id, "unanswered")
-        await touch_dialog(db, dialog.id)
+        try:
+            await touch_dialog(db, dialog.id)
+        except Exception:
+            # Не потеря маппинга — orphan-нотис не нужен, абоненту сбой не показываем.
+            await _rollback_quietly(db)
+            logger.error(
+                "support: сбой обновления last_activity_at диалога %s", dialog.id, exc_info=True
+            )
 
 
 router.message.register(relay_message, StateFilter(SupportForm.chatting))
