@@ -78,6 +78,39 @@ async def _write_or_rollback(
         logger.error(error_msg, *args, exc_info=True)
 
 
+async def _mark_dialog_answered(
+    db: AsyncSession,
+    reactions: StatusReactions,
+    dialog_id: int,
+    up_to_group_message_id: int | None = None,
+) -> None:
+    """
+    Помечает неотвеченные inbound диалога отвеченными и перевешивает реакции на «answered».
+
+    up_to_group_message_id=None — все неотвеченные диалога целиком (закрытие оператором,
+    reply на service-сообщение). Реакции — best-effort: первый сбой прерывает пачку.
+    """
+    batch = await unanswered_inbound(
+        db, dialog_id, up_to_group_message_id=up_to_group_message_id
+    )
+    if not batch:
+        return
+
+    await _write_or_rollback(
+        mark_answered(db, [m.id for m in batch]),
+        db,
+        "support_group: сбой отметки отвеченных сообщений диалога %s",
+        dialog_id,
+    )
+
+    for inbound in batch:
+        delivered = await reactions.set(
+            settings.support_chat_id, inbound.group_message_id, "answered"
+        )
+        if not delivered:
+            break
+
+
 async def _close_as_operator(
     bot: Bot,
     db: AsyncSession,
@@ -170,6 +203,8 @@ async def cmd_close(
 
         _, dialog = found
         closed = await _close_as_operator(message.bot, db, dialog, locale_service)
+        if closed:
+            await _mark_dialog_answered(db, reactions, dialog.id)
 
     if closed:
         await reactions.set(settings.support_chat_id, message.message_id, "answered")
@@ -183,6 +218,7 @@ async def cb_sup_close(
     callback: CallbackQuery,
     t: Callable[..., str],
     locale_service: LocaleService,
+    reactions: StatusReactions,
     **kwargs,
 ) -> None:
     """Закрывает диалог по кнопке «Закрыть диалог» на карточке абонента."""
@@ -198,6 +234,8 @@ async def cb_sup_close(
             return
 
         closed = await _close_as_operator(callback.bot, db, dialog, locale_service)
+        if closed:
+            await _mark_dialog_answered(db, reactions, dialog.id)
         card_message_id = dialog.card_message_id
 
     result_text = (
@@ -297,21 +335,7 @@ async def relay_operator_message(
         # inbound-копии, и её message_id их message_id не может ограничить сверху.
         # up_to=None отмечает отвеченными все неотвеченные inbound диалога целиком.
         up_to = None if replied_message.direction == "service" else reply.message_id
-        batch = await unanswered_inbound(db, dialog.id, up_to_group_message_id=up_to)
-        if batch:
-            await _write_or_rollback(
-                mark_answered(db, [m.id for m in batch]),
-                db,
-                "support_group: сбой отметки отвеченных сообщений диалога %s",
-                dialog.id,
-            )
-
-            for inbound in batch:
-                delivered = await reactions.set(
-                    settings.support_chat_id, inbound.group_message_id, "answered"
-                )
-                if not delivered:
-                    break
+        await _mark_dialog_answered(db, reactions, dialog.id, up_to_group_message_id=up_to)
 
         if dialog.status == "closed":
             await message.reply(t("support_group.delivered_closed"))
