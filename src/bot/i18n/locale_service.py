@@ -1,5 +1,6 @@
 """Сервис локализации на основе JSON-файлов."""
 
+import html
 import json
 from pathlib import Path
 from typing import Any
@@ -69,8 +70,9 @@ class LocaleService:
             return key
 
         if kwargs:
+            safe = {k: html.escape(str(v), quote=False) for k, v in kwargs.items()}
             try:
-                return str(value).format(**kwargs)
+                return str(value).format(**safe)
             except KeyError:
                 return str(value)
 
