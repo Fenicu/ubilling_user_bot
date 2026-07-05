@@ -14,12 +14,27 @@ from bot.keyboards import (
     payment_systems_keyboard,
     payments_menu_keyboard,
 )
-from bot.keyboards.common import back_button, pagination_keyboard
+from bot.keyboards.common import pagination_keyboard
 from bot.services import BillingService
 from bot.states import PayCardForm
 from bot.utils.pagination import paginate
 
 router = Router()
+
+FEE_PERIODS = {"current", "last", "quarter"}
+
+
+def _fee_period_range(period: str, today: date) -> tuple[date, date]:
+    """Возвращает диапазон дат для периода списаний."""
+    if period == "current":
+        return today.replace(day=1), today
+
+    if period == "last":
+        first_day = today.replace(day=1)
+        date_to = first_day - timedelta(days=1)
+        return date_to.replace(day=1), date_to
+
+    return today - timedelta(days=90), today
 
 
 @router.callback_query(F.data == "payments")
@@ -110,20 +125,40 @@ async def show_fee_history(
     password_md5: str,
     **kwargs,
 ) -> None:
-    """Показывает историю списаний за выбранный период."""
+    """Показывает первую страницу истории списаний за выбранный период."""
     period = callback.data.split(":")[1]
-    today = date.today()
+    await _show_fee_page(callback, t, billing, login, password_md5, period, 1)
 
-    if period == "current":
-        date_from = today.replace(day=1)
-        date_to = today
-    elif period == "last":
-        first_day = today.replace(day=1)
-        date_to = first_day - timedelta(days=1)
-        date_from = date_to.replace(day=1)
-    else:
-        date_from = today - timedelta(days=90)
-        date_to = today
+
+@router.callback_query(F.data.startswith("page:fee_"))
+async def fee_pagination(
+    callback: CallbackQuery,
+    t: Callable[..., str],
+    billing: BillingService,
+    login: str,
+    password_md5: str,
+    **kwargs,
+) -> None:
+    """Обработка пагинации истории списаний."""
+    _, section, page_str = callback.data.split(":")
+    period = section.removeprefix("fee_")
+    await _show_fee_page(callback, t, billing, login, password_md5, period, int(page_str))
+
+
+async def _show_fee_page(
+    callback: CallbackQuery,
+    t: Callable[..., str],
+    billing: BillingService,
+    login: str,
+    password_md5: str,
+    period: str,
+    page: int,
+) -> None:
+    """Отображает страницу истории списаний за выбранный период."""
+    if period not in FEE_PERIODS:
+        period = "quarter"
+
+    date_from, date_to = _fee_period_range(period, date.today())
 
     try:
         charges = await billing.client.get_fee_charges(
@@ -139,12 +174,12 @@ async def show_fee_history(
         await callback.answer()
         return
 
+    page_items, total_pages = paginate(charges, page)
     lines = [t("payments.fee_title", date_from=date_from, date_to=date_to), ""]
-    for c in charges[:10]:
+    for c in page_items:
         lines.append(t("payments.fee_line", date=c.date or "—", fee=c.fee, tariff=c.tariff or "—"))
 
-    from aiogram.types import InlineKeyboardMarkup
-    kb = InlineKeyboardMarkup(inline_keyboard=[[back_button(t, "payments")]])
+    kb = pagination_keyboard(t, f"fee_{period}", page, total_pages, "payments")
     await callback.message.edit_text("\n".join(lines), reply_markup=kb)
     await callback.answer()
 
