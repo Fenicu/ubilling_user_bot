@@ -9,6 +9,7 @@ from sqlalchemy import delete, select
 
 from bot.config import settings
 from bot.db import Session, async_session
+from bot.utils.events import get_event_chat
 
 
 class AuthMiddleware(BaseMiddleware):
@@ -27,7 +28,13 @@ class AuthMiddleware(BaseMiddleware):
 
         При валидной сессии добавляет login, password_md5 и session в data.
         Для /start — пропускает без ошибки, но инжектит сессию если она валидна.
+        Не-приватные чаты (группа поддержки и т.п.) пропускаются сразу, без обращения к БД —
+        авторизация абонента там не нужна и не имеет смысла.
         """
+        chat = get_event_chat(event)
+        if chat is not None and chat.type != "private":
+            return await handler(event, data)
+
         user_id = self._get_user_id(event)
         if user_id is None:
             return await handler(event, data)

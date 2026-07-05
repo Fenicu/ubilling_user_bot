@@ -12,6 +12,7 @@ from bot.handlers import (
     menu,
     payments,
     start,
+    support_group,
     support_user,
     tariffs,
     tickets,
@@ -21,6 +22,11 @@ from bot.handlers import (
 def setup_routers() -> Router:
     """Создаёт и настраивает главный роутер с подроутерами."""
     router = Router()
+    if settings.support_enabled:
+        # Групповая сторона идёт первой: у неё собственный фильтр по chat_id
+        # (support-группа), поэтому конкурировать с абонентскими хендлерами она не может —
+        # но должна успеть перехватить свои апдейты раньше catch-all'а поддержки.
+        router.include_router(support_group.router)
     router.include_router(start.router)
     router.include_router(menu.router)
     router.include_router(payments.router)

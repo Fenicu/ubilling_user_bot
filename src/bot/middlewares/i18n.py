@@ -10,6 +10,7 @@ from sqlalchemy import select
 from bot.config import settings
 from bot.db import Session, async_session
 from bot.i18n import LocaleService
+from bot.utils.events import get_event_chat
 
 
 class LocaleMiddleware(BaseMiddleware):
@@ -29,7 +30,16 @@ class LocaleMiddleware(BaseMiddleware):
 
         Загружает полный объект Session и кэширует его в data["_db_session"],
         чтобы AuthMiddleware мог переиспользовать его без повторного запроса к БД.
+        Не-приватные чаты (группа поддержки и т.п.) получают t() на дефолтной локали
+        без обращения к БД — там нет абонентской сессии, локаль которой можно было бы искать.
         """
+        chat = get_event_chat(event)
+        if chat is not None and chat.type != "private":
+            data["t"] = partial(self._locale_service.get, settings.default_locale)
+            data["locale"] = settings.default_locale
+            data["locale_service"] = self._locale_service
+            return await handler(event, data)
+
         user_locale, db_session = await self._get_user_locale(event)
 
         if db_session is not None:

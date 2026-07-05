@@ -173,7 +173,8 @@
     "unsupported_type": "❌ This message type is not supported yet. Please send text, photo, video, document, voice, video note, audio, or sticker.",
     "relay_error": "❌ Failed to send your message to support. Please try again shortly.",
     "close_btn": "🔚 End dialog",
-    "menu_btn_exit": "🏠 Menu"
+    "menu_btn_exit": "🏠 Menu",
+    "closed_by_operator": "✅ The operator has closed the support dialog."
   },
   "support_group": {
     "relay_header": "{hashtag} · {realname}",
@@ -186,6 +187,13 @@
     "card_ip": "🌐 IP: {ip}",
     "card_close_btn": "🔒 Close dialog",
     "closed_by_user": "✅ Subscriber closed the dialog.",
-    "orphan_notice": "⚠️ The message above was sent, but linking it to the dialog failed. Check manually."
+    "orphan_notice": "⚠️ The message above was sent, but linking it to the dialog failed. Check manually.",
+    "emoji_id_hint": "ℹ️ Reply to a message containing custom emoji with this command to get their custom_emoji_id.",
+    "unknown_reply": "❌ Could not find a dialog for this message. Reply to a message from the subscriber's conversation.",
+    "closed_ok": "✅ Dialog closed.",
+    "already_closed": "ℹ️ This dialog was already closed.",
+    "delivered_closed": "⚠️ Message delivered, but the dialog is already closed.",
+    "undelivered": "💔 Failed to deliver the message to the subscriber: {reason}",
+    "unsupported_type": "❌ This message type cannot be forwarded to the subscriber. Please send text, photo, video, document, voice, video note, audio, or sticker."
   }
 }
