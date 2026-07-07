@@ -4,17 +4,22 @@ version = "0.1.0"
 description = "Telegram-бот личного кабинета абонента Ubilling"
 requires-python = ">=3.13"
 dependencies = [
-    "aiogram>=3.20.0",
-    "sqlalchemy[asyncio]>=2.0.0",
-    "asyncpg>=0.30.0",
-    "pydantic-settings>=2.0.0",
-    "alembic>=1.15.0",
-    "redis>=5.0.0",
+    "aiogram>=3.29.1",
+    "sqlalchemy[asyncio]>=2.0.51",
+    "asyncpg>=0.31.0",
+    "pydantic-settings>=2.14.2",
+    "alembic>=1.18.5",
+    "redis>=8.0.1",
     "pyubilling @ git+https://github.com/Fenicu/UbillingWrapper",
 ]
 
 [dependency-groups]
-dev = ["pytest>=8.0", "pytest-asyncio>=0.25"]
+dev = ["pytest>=9.1.1", "pytest-asyncio>=1.4.0"]
+
+[tool.uv]
+# Целевая платформа: всё тестируется на linux/x86_64 — фиксируем окружение,
+# чтобы uv.lock не тянул колёса под другие ОС/архитектуры (короче и предсказуемее).
+environments = ["sys_platform == 'linux' and platform_machine == 'x86_64'"]
 
 # Публичный PyPI как источник по умолчанию — перебивает локальный devpi-кэш из
 # ~/.config/uv/uv.toml, чтобы uv.lock не тянул внутренние URL при обычном uv lock/sync.
