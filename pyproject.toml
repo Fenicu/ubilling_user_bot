@@ -16,6 +16,12 @@ dependencies = [
 [dependency-groups]
 dev = ["pytest>=8.0", "pytest-asyncio>=0.25"]
 
+# Публичный PyPI как источник по умолчанию — перебивает локальный devpi-кэш из
+# ~/.config/uv/uv.toml, чтобы uv.lock не тянул внутренние URL при обычном uv lock/sync.
+[[tool.uv.index]]
+url = "https://pypi.org/simple"
+default = true
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
