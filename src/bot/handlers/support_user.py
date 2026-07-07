@@ -336,7 +336,11 @@ async def relay_message(
             )
 
             if created:
-                await message.answer(t("support.first_ack"))
+                # Клавиатуру переподтверждаем вместе с ack — чтобы она гарантированно
+                # была у абонента с первого же сообщения и не терялась клиентом.
+                await message.answer(
+                    t("support.first_ack"), reply_markup=support_reply_keyboard(t)
+                )
 
         header = build_relay_header(t_default, login, None)
 

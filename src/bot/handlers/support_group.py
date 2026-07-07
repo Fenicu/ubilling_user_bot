@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot.config import settings
 from bot.db import SupportDialog, async_session
 from bot.i18n import LocaleService
+from bot.keyboards.support import support_reply_keyboard
 from bot.services.reactions import StatusReactions
 from bot.services.support import (
     close_dialog,
@@ -259,6 +260,7 @@ async def cb_sup_close(
 async def relay_operator_message(
     message: Message,
     t: Callable[..., str],
+    locale_service: LocaleService,
     reactions: StatusReactions,
     **kwargs,
 ) -> None:
@@ -281,11 +283,16 @@ async def relay_operator_message(
             await message.reply(t("support_group.unsupported_type"))
             return
 
+        # Переподтверждаем reply-клавиатуру «Завершить диалог» на локали абонента —
+        # каждое сообщение бота освежает её, чтобы она не пропадала у абонента по ходу диалога.
+        t_user = partial(locale_service.get, await user_locale(db, dialog.telegram_id))
+
         try:
             result = await message.bot.copy_message(
                 chat_id=dialog.telegram_id,
                 from_chat_id=settings.support_chat_id,
                 message_id=message.message_id,
+                reply_markup=support_reply_keyboard(t_user),
             )
         except (TelegramForbiddenError, TelegramBadRequest) as exc:
             await _write_or_rollback(
