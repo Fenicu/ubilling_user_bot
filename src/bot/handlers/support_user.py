@@ -11,18 +11,14 @@ from aiogram.enums import ContentType
 from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import BaseFilter, Command, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.config import settings
-from bot.db import async_session
+from bot.db import SupportDialog, async_session
 from bot.handlers.menu import show_main_menu
 from bot.i18n import LocaleService
-from bot.keyboards.support import (
-    menu_return_keyboard,
-    support_card_keyboard,
-    support_chat_keyboard,
-)
+from bot.keyboards.support import support_card_keyboard, support_reply_keyboard
 from bot.services import BillingService
 from bot.services.reactions import StatusReactions
 from bot.services.support import (
@@ -65,6 +61,17 @@ class HasOpenDialog(BaseFilter):
             return await find_open_dialog(db, message.from_user.id) is not None
 
 
+class IsSupportCloseButton(BaseFilter):
+    """Совпадает, если текст равен кнопке «Завершить диалог» в любой из загруженных локалей."""
+
+    async def __call__(self, message: Message, locale_service: LocaleService = None) -> bool:
+        if message.text is None or locale_service is None:
+            return False
+        return message.text in {
+            locale_service.get(loc, "support.close_btn") for loc in locale_service.available
+        }
+
+
 async def _notify_orphan(bot, t_default: Callable[..., str], reply_to_message_id: int) -> None:
     """Уведомляет топик поддержки о потере связи сообщения с диалогом (абоненту не показываем)."""
     try:
@@ -84,6 +91,39 @@ async def _rollback_quietly(db: AsyncSession) -> None:
         await db.rollback()
     except Exception:
         logger.warning("support: не удалось откатить сессию после сбоя записи", exc_info=True)
+
+
+async def _notify_topic_close_by_user(
+    db: AsyncSession,
+    bot,
+    t_default: Callable[..., str],
+    dialog: SupportDialog,
+) -> None:
+    """Уведомляет топик поддержки о закрытии диалога абонентом и маппит нотис в БД."""
+    try:
+        notice = await bot.send_message(
+            chat_id=settings.support_chat_id,
+            message_thread_id=settings.support_topic_id,
+            text=t_default("support_group.closed_by_user"),
+            reply_to_message_id=dialog.card_message_id,
+        )
+    except Exception:
+        logger.exception(
+            "support: не удалось уведомить топик о закрытии диалога %s абонентом",
+            dialog.id,
+        )
+    else:
+        # Нотис маппим в support_messages как 'service' — иначе reply оператора
+        # на него молча игнорируется (сообщение не найдено в БД).
+        try:
+            await record_message(db, dialog.id, notice.message_id, "service")
+        except Exception:
+            await _rollback_quietly(db)
+            logger.error(
+                "support: сбой записи маппинга нотиса о закрытии диалога %s абонентом",
+                dialog.id,
+                exc_info=True,
+            )
 
 
 async def _db_write_or_notify(
@@ -118,7 +158,7 @@ async def cmd_support(
 ) -> None:
     """Команда /support — вход в диалог с поддержкой."""
     await state.set_state(SupportForm.chatting)
-    await message.answer(t("support.invite"), reply_markup=support_chat_keyboard(t))
+    await message.answer(t("support.invite"), reply_markup=support_reply_keyboard(t))
 
 
 @router.callback_query(F.data == "support")
@@ -127,7 +167,11 @@ async def show_support_invite(
 ) -> None:
     """Кнопка «Поддержка» в главном меню — вход в диалог с поддержкой."""
     await state.set_state(SupportForm.chatting)
-    await callback.message.edit_text(t("support.invite"), reply_markup=support_chat_keyboard(t))
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    except TelegramAPIError:
+        logger.warning("support: не удалось убрать inline-кнопки меню перед приглашением")
+    await callback.message.answer(t("support.invite"), reply_markup=support_reply_keyboard(t))
     await callback.answer()
 
 
@@ -152,43 +196,66 @@ async def close_support_by_user(
     state: FSMContext,
     t: Callable[..., str],
     locale_service: LocaleService,
+    billing: BillingService,
+    login: str,
+    password_md5: str,
     **kwargs,
 ) -> None:
-    """Закрывает диалог по инициативе абонента."""
+    """
+    Закрывает диалог по инициативе абонента (резервный путь через старую inline-кнопку).
+
+    Приглашение в поддержку теперь всегда отправляется с reply-клавиатурой, поэтому этот
+    callback достижим только с уже показанного ранее inline-сообщения. Поведение сделано
+    симметричным reply-хендлеру close_support_by_reply_button: снимаем reply-клавиатуру
+    и показываем главное меню.
+    """
     t_default = partial(locale_service.get, settings.default_locale)
 
     async with async_session() as db:
         dialog = await find_open_dialog(db, callback.from_user.id)
         if dialog is not None:
             await close_dialog(db, dialog.id, closed_by="user")
-            try:
-                notice = await callback.bot.send_message(
-                    chat_id=settings.support_chat_id,
-                    message_thread_id=settings.support_topic_id,
-                    text=t_default("support_group.closed_by_user"),
-                    reply_to_message_id=dialog.card_message_id,
-                )
-            except Exception:
-                logger.exception(
-                    "support: не удалось уведомить топик о закрытии диалога %s абонентом",
-                    dialog.id,
-                )
-            else:
-                # Нотис маппим в support_messages как 'service' — иначе reply оператора
-                # на него молча игнорируется (сообщение не найдено в БД).
-                try:
-                    await record_message(db, dialog.id, notice.message_id, "service")
-                except Exception:
-                    await _rollback_quietly(db)
-                    logger.error(
-                        "support: сбой записи маппинга нотиса о закрытии диалога %s абонентом",
-                        dialog.id,
-                        exc_info=True,
-                    )
+            await _notify_topic_close_by_user(db, callback.bot, t_default, dialog)
 
     await state.clear()
-    await callback.message.edit_text(t("support.closed"), reply_markup=menu_return_keyboard(t))
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    except TelegramAPIError:
+        logger.warning("support: не удалось убрать inline-кнопки приглашения при закрытии")
     await callback.answer()
+    await callback.message.answer(t("support.closed"), reply_markup=ReplyKeyboardRemove())
+    await show_main_menu(callback.message, t, billing, login, password_md5)
+
+
+@router.message(IsSupportCloseButton())
+async def close_support_by_reply_button(
+    message: Message,
+    state: FSMContext,
+    t: Callable[..., str],
+    locale_service: LocaleService,
+    billing: BillingService,
+    login: str,
+    password_md5: str,
+    **kwargs,
+) -> None:
+    """
+    Закрывает диалог по нажатию reply-кнопки «Завершить диалог».
+
+    Без state-фильтра: кнопка остаётся на клавиатуре и после выхода в меню
+    (state=None), пока абонент явно её не нажмёт — ловим оба состояния, регистрация
+    раньше relay_message защищает от пересылки текста кнопки оператору.
+    """
+    t_default = partial(locale_service.get, settings.default_locale)
+
+    async with async_session() as db:
+        dialog = await find_open_dialog(db, message.from_user.id)
+        if dialog is not None:
+            await close_dialog(db, dialog.id, closed_by="user")
+            await _notify_topic_close_by_user(db, message.bot, t_default, dialog)
+
+    await state.clear()
+    await message.answer(t("support.closed"), reply_markup=ReplyKeyboardRemove())
+    await show_main_menu(message, t, billing, login, password_md5)
 
 
 async def relay_message(

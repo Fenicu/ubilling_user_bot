@@ -14,6 +14,7 @@ from bot.keyboards.support import (
     menu_return_keyboard,
     support_card_keyboard,
     support_chat_keyboard,
+    support_reply_keyboard,
 )
 from bot.keyboards.tariffs import tariffs_menu_keyboard
 from bot.keyboards.tickets import (
@@ -37,6 +38,7 @@ __all__ = [
     "payments_menu_keyboard",
     "support_card_keyboard",
     "support_chat_keyboard",
+    "support_reply_keyboard",
     "tariffs_menu_keyboard",
     "ticket_cancel_keyboard",
     "ticket_view_keyboard",

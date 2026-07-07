@@ -2,7 +2,21 @@
 
 from typing import Callable
 
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+)
+
+
+def support_reply_keyboard(t: Callable[..., str]) -> ReplyKeyboardMarkup:
+    """Постоянная reply-клавиатура активного диалога: одна кнопка «Завершить диалог» у дна чата."""
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=t("support.close_btn"))]],
+        resize_keyboard=True,
+        is_persistent=True,
+    )
 
 
 def support_chat_keyboard(t: Callable[..., str]) -> InlineKeyboardMarkup:
